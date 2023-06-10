@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 type Todo = {
     id: number
@@ -8,17 +8,43 @@ type Todo = {
     done: boolean
 }
 
-let id = 0
-const todoList = ref<Todo[]>([])
+const id = ref<number>(parseInt(localStorage.getItem('id') || "0", 10))
+const todoList = ref<Todo[]>(JSON.parse(localStorage.getItem('todoList') || "[]"))
 const newTodoName = ref('')
 const newTodoPriority = ref(1)
 
+watch(id, (newId) => {
+    localStorage.setItem("id", String(newId))
+})
+
+watch(todoList, (newTodoList) => {
+    localStorage.setItem("todoList", JSON.stringify(newTodoList))
+})
+
 const addTodo = () => {
     if (newTodoName.value === '') return
-    todoList.value.push({id: id++, name: newTodoName.value, priority: newTodoPriority.value, done: false})
-    todoList.value.sort((a, b) => b.priority - a.priority)
+    id.value += 1
+    const newTodo: Todo = {
+        id: id.value,
+        name: newTodoName.value,
+        priority: newTodoPriority.value,
+        done: false
+    }
+    const newTodoList: Todo[] = [...todoList.value, newTodo]
+    newTodoList.sort((a, b) => b.priority - a.priority)
+    todoList.value = newTodoList
     newTodoName.value = ''
     newTodoPriority.value = 1
+}
+
+const completeTask = (id: number) => {
+    const newTodoList = todoList.value.map((todo) => {
+        if (todo.id === id) {
+            return {...todo, done: true}
+        }
+        return todo
+    })
+    todoList.value = newTodoList
 }
 </script>
 
@@ -29,7 +55,7 @@ const addTodo = () => {
         <ul>
             <li v-for="todo in todoList.filter((t) => !t.done)" :key="todo.id" :class="{ 'urgent': todo.priority === 5 }">
                 <div>
-                    <button @click="todo.done=true">済</button>
+                    <button @click="completeTask(todo.id)">済</button>
                     {{ todo.name }}
                 </div>
                 <div>優先度: {{ todo.priority }}</div>
